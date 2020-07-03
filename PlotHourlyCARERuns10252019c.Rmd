@@ -1,0 +1,250 @@
+---
+title: "Plot CARE regression output"
+author: "Evan Sherwin"
+date: "3/18/2019"
+output: html_document
+---
+
+```{r global_options, echo=FALSE}
+#Set global Markdown options
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE) #, cache=TRUE)
+library(ggplot2)
+
+#Turn off scientific notation
+options(scipen=999)
+```
+
+```{r}
+# Load libraries
+require(ggplot2)
+require(gdata) # To reorder factors
+require(plyr) # To map factor values
+require(grDevices) # To save transparent graphics
+require(scales) # To have commas in y-axis labels
+require(grid) # To allow unit() function
+require(data.table)
+```
+
+```{r}
+# Graphing settings
+default.graph.height <- 7.5 #7.5 # inches
+default.graph.width <-  10 # inches
+
+# Colorblind-friendly color palette
+#cbbPalette <- c("#56B4E9", "#FFA500", "#D55E00") #c("#56B4E9", "#F0E442", "#D55E00")
+cbPalette <- c(rgb(1, 0, 0), rgb(0, 0, 1), rgb(0.1, 0.1, 0.1)) #c("#56B4E9", "#FFA500", "#D55E00")
+# Basic palette
+basicPalette <- c("blue", "orange", "red")
+```
+
+```{r}
+# Set working directory
+setwd("/Backupworthy/Summer 2017/Smartmeters/STATA/CARE runs")
+
+# Column names
+GoodColNames <- c("Variable", "Coeff", "SE", "t", "p>|t|", "CI-low", "CI-high")
+HourlyCoeffRows <- 14:20
+HourlyCoeffHourBlocks <- 2:8
+
+# Load STATA regression table output
+FullSampleCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Baseline Full", skip=13, header=TRUE)
+colnames(FullSampleCoeffs) <- GoodColNames
+FullSampleCoeffs$Subsample <- "Full sample"
+#FullSampleCoeffs$Season <- "Full"
+FullAggCoeffs <- FullSampleCoeffs[1, ]
+FullSampleCoeffs <- FullSampleCoeffs[HourlyCoeffRows,]
+FullSampleCoeffs$Hourblock <- HourlyCoeffHourBlocks
+
+WinterCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Winter", skip=13, header=TRUE)
+colnames(WinterCoeffs) <- GoodColNames
+#WinterCoeffs$Region <- "Full"
+WinterCoeffs$Subsample <- "Winter"
+WinterAggCoeffs <- WinterCoeffs[1, ]
+WinterCoeffs <- WinterCoeffs[HourlyCoeffRows, ]
+WinterCoeffs$Hourblock <- HourlyCoeffHourBlocks
+
+SummerCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Summer", skip=13, header=TRUE)
+colnames(SummerCoeffs) <- GoodColNames
+#SummerCoeffs$Region <- "Full"
+SummerCoeffs$Subsample <- "Summer"
+SummerAggCoeffs <- SummerCoeffs[1, ]
+SummerCoeffs <- SummerCoeffs[HourlyCoeffRows, ]
+SummerCoeffs$Hourblock <- HourlyCoeffHourBlocks
+
+CoastCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Coast", skip=13, header=TRUE)
+colnames(CoastCoeffs) <- GoodColNames
+CoastCoeffs$Subsample <- "Coast"
+#CoastCoeffs$Season <- "Full"
+CoastAggCoeffs <- CoastCoeffs[1, ]
+CoastCoeffs <- CoastCoeffs[HourlyCoeffRows, ]
+CoastCoeffs$Hourblock <- HourlyCoeffHourBlocks
+
+HillsCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Hills", skip=13, header=TRUE)
+colnames(HillsCoeffs) <- GoodColNames
+HillsCoeffs$Subsample <- "Inland Hills"
+#HillsCoeffs$Season <- "Full"
+HillsAggCoeffs <- HillsCoeffs[1, ]
+HillsCoeffs <- HillsCoeffs[HourlyCoeffRows, ]
+HillsCoeffs$Hourblock <- HourlyCoeffHourBlocks
+
+ValleyCoeffs <- read.xls("CARE good panel regressions 04062019.xlsx", sheet="Valley", skip=13, header=TRUE)
+colnames(ValleyCoeffs) <- GoodColNames
+ValleyCoeffs$Subsample <- "Central Valley"
+#ValleyCoeffs$Season <- "Full"
+ValleyAggCoeffs <- ValleyCoeffs[1, ]
+ValleyCoeffs <- ValleyCoeffs[HourlyCoeffRows, ]
+ValleyCoeffs$Hourblock <- HourlyCoeffHourBlocks
+```
+
+```{r}
+# Join the coefficients
+AllHourlyCoeffs <- rbindlist(list(FullSampleCoeffs, WinterCoeffs, SummerCoeffs, CoastCoeffs, HillsCoeffs, ValleyCoeffs))
+AllAggCoeffs <- rbindlist(list(FullAggCoeffs, WinterAggCoeffs, SummerAggCoeffs, CoastAggCoeffs, HillsAggCoeffs, ValleyAggCoeffs))
+```
+
+```{r}
+# Give the subsample factor variable the desired order
+# First value is bottom right
+# Last value is top left
+# Numbers appear to move from bottom right to top left, along the rows
+subsample.order.map.num <- c( 6, 5, 3, 1, 4, 2)
+  # c(6, 1, 4, 5, 2, 3) # Order used in thesis
+  # c(4, 2, 1, 6, 5, 3)
+  # c(1, 6, 4, 2, 5, 3)
+  # c(4, 5, 2, 3, 6, 1)
+  # c(6, 4, 3, 1, 5, 2)
+  # c(5, 4, 6, 1, 3, 2)# c(1, 4, 5, 6, 3, 2)
+  
+AllHourlyCoeffs$Subsample <- as.factor(AllHourlyCoeffs$Subsample)
+AllAggCoeffs$Subsample <- as.factor(AllAggCoeffs$Subsample)
+Subsample.order.map <- c("Full sample", "Coast", "Inland Hills", "Central Valley", "Summer", "Winter")
+
+AllHourlyCoeffs$SubsampleReordered <- factor(AllHourlyCoeffs$Subsample, levels(AllHourlyCoeffs$Subsample)[rev(subsample.order.map.num)])
+AllAggCoeffs$SubsampleReordered <- factor(AllAggCoeffs$Subsample, levels(AllAggCoeffs$Subsample)[rev(subsample.order.map.num)])
+```
+
+```{r}
+# Create hourly % increases with CIs
+# AllHourlyCoeffs <- AllHourlyCoeffs[, -"TotCoeff"]
+AllHourlyCoeffs$TotCoeff <- 0
+AllHourlyCoeffs$TotSE <- 0
+for (xx in 1:dim(AllAggCoeffs)[1]) {
+  # Select rows
+  selectedRows <- (unlist(AllAggCoeffs[xx, "Subsample"]) == AllHourlyCoeffs$Subsample)
+  # Add aggregate coefficient magnitude to hourly coefficients
+  AllHourlyCoeffs[selectedRows, "TotCoeff"] <- unlist(AllAggCoeffs[xx, "Coeff"]) + AllHourlyCoeffs[selectedRows, "Coeff"]
+  # Add standard errors in quadrature
+  AllHourlyCoeffs[selectedRows, "TotSE"] <- sqrt(unlist(AllAggCoeffs[xx, "SE"])^2 + AllHourlyCoeffs[selectedRows, "SE"]^2)
+} 
+
+# Add aggregate coefficients to the panel as the first hour block
+AllAggCoeffs$Hourblock <- 1
+AllAggCoeffs$TotCoeff <- AllAggCoeffs$Coeff
+AllAggCoeffs$TotSE <- AllAggCoeffs$SE
+AllHourlyCoeffs <- rbind(AllHourlyCoeffs, AllAggCoeffs)
+
+
+# Standard error multiplier for 95% confidence intervals
+se_ci_mult <- 1.95996398454005423552
+
+# Create aggregate confidence intervals
+# Use total or individual SE?
+AllHourlyCoeffs$LowCITot <- AllHourlyCoeffs$TotCoeff - se_ci_mult*AllHourlyCoeffs$SE
+AllHourlyCoeffs$HighCITot <- AllHourlyCoeffs$TotCoeff + se_ci_mult*AllHourlyCoeffs$SE
+```
+
+
+```{r}
+# Convert CARE coefficients from logarithms to percentages
+#care_hr_coeffs_pct <- care_hr_coeffs
+#care_hr_coeffs_pct[,-1] <- exp(care_hr_coeffs_pct[,-1]) - 1
+pctConversionFactor <- 100
+AllHourlyCoeffs$TotPct <- (exp(AllHourlyCoeffs$TotCoeff) - 1)*pctConversionFactor
+AllHourlyCoeffs$PctCILow <- (exp(AllHourlyCoeffs$LowCITot) - 1)*pctConversionFactor
+AllHourlyCoeffs$PctCIHigh <- (exp(AllHourlyCoeffs$HighCITot) - 1)*pctConversionFactor
+```
+
+```{r}
+# Create 3-hour blocks that correspond to hours
+AllHourlyCoeffs$HourblockAsHour <- AllHourlyCoeffs$Hourblock*3 - 3 #2
+```
+
+```{r}
+# Set graph parameters
+default.graph.height <- 5 #4 #2 #3 #5 # inches
+default.graph.width <- 10 # 8.5 #7.5 #5 #10 # inches
+```
+
+```{r}
+# Plot the percentages and errorbars
+# For now, only include coefficients from the full year
+# Use hour 1 as a baseline reference line, not as part of the plot
+# justFullYear <- AllHourlyCoeffs$Season == "Full" # 1
+setEPS()
+postscript("Hourly CARE 10252019.eps", width=default.graph.width, height=default.graph.height)
+
+isFirstHour <- AllHourlyCoeffs$Hourblock == 1
+selectedData <- AllHourlyCoeffs[!isFirstHour, ] # & justFullYear
+careHourlyPlot <- ggplot(selectedData, aes(x=HourblockAsHour, y=TotPct, color=Subsample)) #, color=Season
+AggCoeffsForLine <- AllHourlyCoeffs[isFirstHour, ] # & justFullYear
+pd <- position_dodge(1) # 0.1
+# Figure out how to add horizontal line for baseline coefficient value
+#setEPS()
+#postscript("CARE hourly allregion 04082017b.eps", width=default.graph.width, height=default.graph.height)
+careHourlyPlot + 
+facet_wrap(~SubsampleReordered) +
+    geom_errorbar(aes(ymin=PctCILow, ymax=PctCIHigh), width=.5, position=pd) + # 0.3
+    scale_y_continuous(limits=c(-0.05, NA)) +
+    scale_x_continuous(limits=c(0, 23), breaks=seq(0, 23, by=3)) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +
+    geom_hline(aes(yintercept = TotPct), linetype=2, size=1, data=AggCoeffsForLine) + # , color=Season, linetype=Season
+    geom_hline(aes(yintercept = PctCIHigh), linetype=3, size=0.5, data=AggCoeffsForLine) +
+    geom_hline(aes(yintercept = PctCILow), linetype=3, size=0.5, data=AggCoeffsForLine) +
+#    scale_color_manual(name="Region", values=cbbPalette) + # c(1,2)
+    theme_bw() +
+    ylab("CARE consumption increase [%]") +
+    xlab("Hour") +
+theme(text = element_text(size=16), 
+        axis.title.x = element_text(size=18), 
+        axis.text.x = element_text(size=16, face="plain"),
+        axis.title.y = element_text(size=18), 
+        axis.text.y = element_text(size=16, face="plain"),
+        legend.position = "none"
+      ) # Remove legend for now
+dev.off()
+```
+```{r}
+# Plot by season
+# For now, only include coefficients from the full year
+# Use hour 1 as a baseline reference line, not as part of the plot
+justAllRegions <- AllHourlyCoeffs$Region == "Full" # 1
+isFirstHour <- AllHourlyCoeffs$Hourblock == 1
+selectedData <- AllHourlyCoeffs[!isFirstHour & justAllRegions, ]
+careHourlyPlot <- ggplot(selectedData, aes(x=Hourblock, y=TotPct, color=Season)) #, color=Season
+AggCoeffsForLine <- AllHourlyCoeffs[isFirstHour & justAllRegions, ]
+pd <- position_dodge(1) # 0.1
+# Figure out how to add horizontal line for baseline coefficient value
+#setEPS()
+#postscript("CARE hourly allregion 04082017b.eps", width=default.graph.width, height=default.graph.height)
+careHourlyPlot + 
+facet_wrap(~Season) +
+    geom_errorbar(aes(ymin=PctCILow, ymax=PctCIHigh), width=.5, position=pd) + # 0.3
+    scale_y_continuous(limits=c(-0.00, NA)) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +
+    geom_hline(aes(yintercept = TotPct), linetype=2, size=1, data=AggCoeffsForLine) + # , color=Season, linetype=Season
+#    scale_color_manual(name="Region", values=cbbPalette) + # c(1,2)
+    theme_bw() +
+    ylab("CARE consumption increase [%]") +
+    xlab("3-hour block") +
+theme(text = element_text(size=16), 
+        axis.title.x = element_text(size=18), 
+        axis.text.x = element_text(size=16, face="plain"),
+        axis.title.y = element_text(size=18), 
+        axis.text.y = element_text(size=16, face="plain"),
+#        legend.position = "none"
+      ) # Remove legend for now
+#dev.off()
+```

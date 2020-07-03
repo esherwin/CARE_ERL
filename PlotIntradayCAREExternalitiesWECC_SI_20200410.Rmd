@@ -1,0 +1,367 @@
+---
+title: "Plot CARE regression output"
+author: "Evan Sherwin"
+date: "3/18/2019"
+output: html_document
+---
+
+```{r global_options, echo=FALSE}
+#Set global Markdown options
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE) #, cache=TRUE)
+library(ggplot2)
+
+#Turn off scientific notation
+options(scipen=999)
+```
+
+```{r}
+# Load libraries
+require(ggplot2)
+require(gdata) # To reorder factors
+require(plyr) # To map factor values
+require(grDevices) # To save transparent graphics
+require(scales) # To have commas in y-axis labels
+require(grid) # To allow unit() function
+require(data.table)
+```
+
+```{r}
+# Graphing settings
+default.graph.height <- 7.5 #7.5 # inches
+default.graph.width <-  10 # inches
+
+# Colorblind-friendly color palette
+#cbbPalette <- c("#56B4E9", "#FFA500", "#D55E00") #c("#56B4E9", "#F0E442", "#D55E00")
+cbPalette <- c(rgb(1, 0, 0), rgb(0, 0, 1), rgb(0.1, 0.1, 0.1)) #c("#56B4E9", "#FFA500", "#D55E00")
+# Basic palette
+basicPalette <- c("blue", "orange", "red")
+```
+
+```{r}
+# Set working directory
+setwd("~/Documents/CMU Research/CARE/Externality plots")
+
+# Load climate and health damages and capacity costs
+#ClimateDamages <- read.csv("CARE climate damages WECC 2011 04162019b.csv", header=TRUE)
+#ClimateDamages$ValueMillions <- ClimateDamages$Value/1000000
+#HealthDamages <- read.csv("CARE health damages WECC 2011 04162019b.csv", header=TRUE)
+#HealthDamages$ValueMillions <- HealthDamages$Value/1000000
+#CapacityCost <- read.csv("CARE capacity cost hrblock7 cost170 04162019.csv", header=TRUE)
+#CapacityCost$ValueMillions <- CapacityCost$Value/1000000
+
+externalityCosts <- read.csv("Externalities WECC 2011 update 20200401.csv", header=TRUE)
+  # read.csv("Externalities WECC 2011 05082019.csv", header=TRUE)
+
+# Add NERC region and year for WECC-only, 2018-only data
+externalityCosts$NERC_region <- "WECC"
+#externalityCosts$Year <- 2011
+externalityCosts$SE_adding_method <- "Quadrature"
+```
+
+```{r}
+# Add year-marg_avg
+externalityCosts$YearMargAvg <- as.factor(paste(externalityCosts$Year, externalityCosts$Marginal_or_average))
+
+# Swap marginal and average in factor order
+numUniqueYearMargAvgVals <- length(unique(externalityCosts$YearMargAvg))
+MargAvgSwapOrder <- replicate(0, numUniqueYearMargAvgVals)
+for (ii in 1:numUniqueYearMargAvgVals) {
+  if ((ii %% 2) == 1) {
+    MargAvgSwapOrder[ii] <- ii + 1
+  } else if  ((ii %% 2) == 0) {
+    MargAvgSwapOrder[ii] <- ii - 1
+  } else {NULL}
+}
+MargAvgSwapOrder <- unlist(MargAvgSwapOrder)
+externalityCosts$YearMargAvgReordered <- factor(externalityCosts$YearMargAvg, levels(externalityCosts$YearMargAvg)[MargAvgSwapOrder],
+                                            labels=levels(externalityCosts$YearMargAvg)[MargAvgSwapOrder])
+```
+
+```{r}
+# Add year-marg_avg
+externalityCosts$YearModel <- as.factor(paste(externalityCosts$Year, externalityCosts$Damages_model))
+```
+
+```{r}
+# Give the data subsample factor variable the desired order
+subsample.order.map.num <- c(2, 4, 6, 1, 3, 5)
+updatedSampleNames <- c("Full sample", "Summer", "Winter", "Coast", "Inland Hills", "Central Valley")
+  # c(6, 1, 4, 5, 2, 3)
+  # c(4, 2, 1, 6, 5, 3)
+  # c(1, 6, 4, 2, 5, 3)
+  # c(4, 5, 2, 3, 6, 1)
+  # c(6, 4, 3, 1, 5, 2)
+  # c(5, 4, 6, 1, 3, 2)# c(1, 4, 5, 6, 3, 2)
+  
+externalityCosts$Data_subsample <- as.factor(externalityCosts$Data_subsample)
+#HealthDamages$Data_subsample <- as.factor(HealthDamages$Data_subsample)
+#CapacityCost$Data_subsample <- as.factor(CapacityCost$Data_subsample)
+Subsample.order.map <- c("Full sample", "Coast", "Inland Hills", "Central Valley", "Summer", "Winter")
+
+externalityCosts$SubsampleReordered <- factor(externalityCosts$Data_subsample, levels(externalityCosts$Data_subsample)[subsample.order.map.num],
+                                            labels=updatedSampleNames)
+```
+
+```{r}
+# Convert value to millions of dollars
+oneMillion <- 1000000
+externalityCosts$valueMillions <- externalityCosts$Value/oneMillion
+```
+
+```{r}
+# Only include externality costs for which errors are added in quadrature
+externalityCosts <-  externalityCosts[externalityCosts$SE_adding_method=="Quadrature", ]
+```
+
+```{r}
+# Reorder time resolution factor
+time.order.map.num <- c(2, 1)
+  
+externalityCosts$Time_resolution <- as.factor(externalityCosts$Time_resolution)
+externalityCosts$TimeResReordered <- factor(externalityCosts$Time_resolution, levels(externalityCosts$Time_resolution)[time.order.map.num])
+```
+
+```{r}
+# Reorder externality factor
+externality.order.map.num <- c(1, 2, 3) # c(2, 3, 1)
+  
+externalityCosts$Externality <- as.factor(externalityCosts$Externality)
+externalityCosts$ExternalityReordered <- factor(externalityCosts$Externality, levels(externalityCosts$Externality)[externality.order.map.num])
+```
+
+```{r}
+# Set graph parameters
+default.graph.height <- 5 # 8 # 10 #4 #2 #3 #5 # inches
+default.graph.width <- 12 #10 # 8.5 #7.5 #5 #10 # inches
+```
+
+```{r}
+# Climate damages plot, avg v. marginal
+
+# Selects mean value first, adds low and high CI values
+selectedYear <- c('2011 again', '2018') # '2011 again' 2017
+selectedNERCRegion <- "WECC" #"RFC" "WECC
+selectedExternality <- "Climate"
+# selectedDamagesModel <- "AP2" #"EASIUR" "AP2"
+#selectedDamageType <- "Marginal"# "Marginal" #"Average"
+
+# Only include standard errors added in quadrature
+selectedCIClimate <- externalityCosts[(externalityCosts$Confidence_interval=="Mean") &
+                                        (externalityCosts$NERC_region==selectedNERCRegion) &
+                                        (externalityCosts$Year %in% selectedYear) &
+                                        (externalityCosts$ExternalityReordered==selectedExternality), ]
+
+selectedCIClimate$lowCI <- externalityCosts[(externalityCosts$Confidence_interval=="P2.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion) &
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+
+selectedCIClimate$highCI <- externalityCosts[(externalityCosts$Confidence_interval=="P97.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion)& 
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+```
+
+```{r}
+setEPS()
+postscript("CARE emissions WECC sensitivity 20200402.eps",  width=default.graph.width, height=default.graph.height) #"CARE climate health damages 04162019b.eps"
+  # "CARE capacity costs 04162019.eps"
+  
+# Plot CARE damages
+careDamagesPlot <- ggplot(selectedCIClimate, aes(x=SubsampleReordered, y=valueMillions, color=TimeResReordered)) #, color=Season
+#AggCoeffsForLine <- AllHourlyCoeffs[isFirstHour, ] # & justFullYear
+pd <- position_dodge(1) # 0.1
+# Figure out how to add horizontal line for baseline coefficient value
+#setEPS()
+#postscript("CARE hourly allregion 04082017b.eps", width=default.graph.width, height=default.graph.height)
+careDamagesPlot + 
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +
+    geom_errorbar(aes(ymin=lowCI, ymax=highCI), width=.5, position=pd, data=selectedCIClimate) +
+    scale_y_continuous(breaks = seq(0, 60, 20), expand = expand_scale(add = c(1, 7))) +#, limits = c(0, 70)) + #c(0, 0)
+    expand_limits(y=0) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ylab("Climate damages [$M]") +
+    facet_grid(YearMargAvgReordered~., labeller = labeller(YearMargAvgReordered = c("2011 again Marginal" = "A) 2011 Marginal", "2011 again Average" = "B) 2011 Average", "2018 Marginal" = "C) 2018 Marginal", "2018 Average" = "D) 2018 Average"))) + #, scales="free_y", space="free_y") +  
+  geom_label(data=data.frame(x = 5.84, y = 40, YearMargAvgReordered = c("2011 again Marginal", "2011 again Average", "2018 Marginal", "2018 Average"), label = c("A) 2011 Marginal", "B) 2011 Average ", "C) 2018 Marginal", "D) 2018 Average ")), aes(x, y, label = label), inherit.aes = FALSE, size=8.6, label.r=unit(0, "lines"), label.size=0.15, label.padding=unit(0.35, "lines"), fill="gray") +
+    xlab("") + # Data subsample
+  guides(color=guide_legend(title="Time resolution", nrow=1)) +
+theme(text = element_text(size=16), # 16
+        axis.title.x = element_text(size=18), #18
+        axis.text.x = element_text(size=20, face="plain", color="black"), #16
+        axis.title.y = element_text(size=20), #16
+        axis.text.y = element_text(size=16, face="plain", color="black"),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        legend.position = c(0.5, .95), # c(0.595, 0.245), # c(0.75, 0.9) c(0.75, 0.75) # For RFC "bottom", 
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=12),
+        legend.box.background = element_rect(colour = "black", size=0.5),
+        legend.direction = "horizontal",
+#        legend.box = "horizontal",
+        panel.border=element_rect(colour="black",size=2))#, #18
+dev.off()
+
+```
+```{r}
+# Health damages plot, AP2 v. EASIUR, 2011 v 2018
+
+# Selects mean value first, adds low and high CI values
+selectedYear <- c('2011 again', '2018') # '2011 again' 2017
+selectedNERCRegion <- "WECC" #"RFC" "WECC
+selectedExternality <- "Health"
+# selectedDamagesModel <- "AP2" #"EASIUR" "AP2"
+selectedDamageType <- "Average"# "Marginal" #"Average"
+
+# Only include standard errors added in quadrature
+selectedCIHealth <- externalityCosts[(externalityCosts$Confidence_interval=="Mean") &
+                                        (externalityCosts$NERC_region==selectedNERCRegion) &
+                                        (externalityCosts$Year %in% selectedYear) &
+                                        (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                        (externalityCosts$ExternalityReordered==selectedExternality), ]
+
+selectedCIHealth$lowCI <- externalityCosts[(externalityCosts$Confidence_interval=="P2.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion) &
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+
+selectedCIHealth$highCI <- externalityCosts[(externalityCosts$Confidence_interval=="P97.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion)& 
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+```
+
+```{r}
+# Main text plot, AP2, marginal damages, 2011
+
+# Selects mean value first, adds low and high CI values
+selectedYear <- '2011 again' # c('2011 again', '2018') # '2011 again' 2017
+selectedNERCRegion <- "WECC" #"RFC" "WECC
+selectedExternality <- c("Climate","Health","Capacity")
+# selectedDamagesModel <- "AP2" #"EASIUR" "AP2"
+selectedDamageType <- "Marginal"# "Marginal" #"Average"
+
+# Only include standard errors added in quadrature
+selectedCIHealth <- externalityCosts[(externalityCosts$Confidence_interval=="Mean") &
+                                        (externalityCosts$NERC_region==selectedNERCRegion) &
+                                        (externalityCosts$Year %in% selectedYear) &
+                                        (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                        (externalityCosts$ExternalityReordered==selectedExternality), ]
+
+selectedCIHealth$lowCI <- externalityCosts[(externalityCosts$Confidence_interval=="P2.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion) &
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+
+selectedCIHealth$highCI <- externalityCosts[(externalityCosts$Confidence_interval=="P97.5") &
+                                              (externalityCosts$NERC_region==selectedNERCRegion)& 
+                                              (externalityCosts$Year %in% selectedYear) &
+                                              (externalityCosts$Marginal_or_average==selectedDamageType) &
+                                              (externalityCosts$ExternalityReordered==selectedExternality),
+                                              "valueMillions"]
+```
+
+```{r}
+setEPS()
+postscript("CARE health WECC main 20200410b.eps",  width=default.graph.width, height=default.graph.height) #"CARE climate health damages 04162019b.eps"
+  # "CARE capacity costs 04162019.eps"
+  
+# Plot CARE damages
+careDamagesPlot <- ggplot(selectedCIHealth, aes(x=SubsampleReordered, y=valueMillions, color=TimeResReordered)) #, color=Season
+#AggCoeffsForLine <- AllHourlyCoeffs[isFirstHour, ] # & justFullYear
+pd <- position_dodge(1) # 0.1
+# Figure out how to add horizontal line for baseline coefficient value
+#setEPS()
+#postscript("CARE hourly allregion 04082017b.eps", width=default.graph.width, height=default.graph.height)
+careDamagesPlot + 
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +
+    geom_errorbar(aes(ymin=lowCI, ymax=highCI), width=.5, position=pd, data=selectedCIHealth) +
+    scale_y_continuous(breaks = seq(0, 70, 10), expand = expand_scale(add = c(1, 7))) +
+    expand_limits(y=0) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ylab("Average health damages [$M]") +
+    #ylab("Marginal health damages [$M]") +
+    facet_grid(ExternalityReordered~., labeller = labeller(ExternalityReordered = c("Capacity" = "A) Capacity costs"), "Climate" = "B) Climate damages", "Health" = "C) Health damages"), scales="free_y", space="free_y") +  
+    geom_label(data=data.frame(x = 5.69, y = c(60, 40, 30), ExternalityReordered = c("Capacity", "Climate", "Health"), label = c("A) Capacity costs     ", "B) Climate damages ", "C) Health damages  ")), aes(x, y, label = label), inherit.aes = FALSE, size=8.6, label.r=unit(0, "lines"), label.size=0.15, label.padding=unit(0.35, "lines"), fill="gray") +
+    xlab("") + # Data subsample
+  guides(color=guide_legend(title="Time resolution", nrow=1)) +
+theme(text = element_text(size=16), # 16
+        axis.title.x = element_text(size=18), #18
+        axis.text.x = element_text(size=20, face="plain", color="black"), #16
+        axis.title.y = element_text(size=20), #16
+        axis.text.y = element_text(size=16, face="plain", color="black"),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        legend.position = c(0.51, .945), # c(0.595, 0.245), # c(0.75, 0.9) c(0.75, 0.75) # For RFC "bottom", 
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=12),
+        legend.box.background = element_rect(colour = "black", size=0.5),
+        legend.direction = "horizontal",
+#        legend.box = "horizontal",
+        panel.border=element_rect(colour="black",size=2))#, #18
+dev.off()
+
+```
+
+```{r}
+setEPS()
+postscript("CARE externalities WECC AP2 marginal 2018 20200401b.eps",  width=default.graph.width, height=default.graph.height) #"CARE climate health damages 04162019b.eps"
+  # "CARE capacity costs 04162019.eps"
+  
+# Plot CARE damages
+careDamagesPlot <- ggplot(selectedCI, aes(x=SubsampleReordered, y=valueMillions, color=TimeResReordered)) #, color=Season
+#AggCoeffsForLine <- AllHourlyCoeffs[isFirstHour, ] # & justFullYear
+pd <- position_dodge(1) # 0.1
+# Figure out how to add horizontal line for baseline coefficient value
+#setEPS()
+#postscript("CARE hourly allregion 04082017b.eps", width=default.graph.width, height=default.graph.height)
+careDamagesPlot + 
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +
+    geom_errorbar(aes(ymin=lowCI, ymax=highCI), width=.5, position=pd, data=selectedCI) +
+    scale_y_continuous(breaks = seq(0, 70, 10), expand = expand_scale(add = c(1, 7))) +#, limits = c(0, 70)) + #c(0, 0)
+    expand_limits(y=0) +
+  #    geom_polygon(aes(x = x,y = y, color = "black", size = 1, fill = NA)) +
+#    facet_wrap(~ExternalityReordered, ncol=1) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ylab("CARE externalities [$M]") +
+    facet_grid(ExternalityReordered~., labeller = labeller(ExternalityReordered = c("Climate" = "A) Climate damages", "Health" = "B) Health damages", "Capacity" = "C) Capacity costs")), scales="free_y", space="free_y") +  
+#  geom_label(data=data.frame(x = 4.35, y = c(33.75, 15.5, 66.5), ExternalityReordered = c("Climate", "Health", "Capacity"), label = c("A) Climate damages", "B) Health damages  ", "C) Capacity costs     ")), aes(x, y, label = label), inherit.aes = FALSE, size=8.6, label.r=unit(0, "lines"), label.size=0.15, label.padding=unit(0.35, "lines"), fill="gray") + # For WECC
+  geom_label(data=data.frame(x = 5.65, y = c(36, 60, 66.5), ExternalityReordered = c("Climate", "Health", "Capacity"), label = c("A) Climate damages", "B) Health damages  ", "C) Capacity costs     ")), aes(x, y, label = label), inherit.aes = FALSE, size=8.6, label.r=unit(0, "lines"), label.size=0.15, label.padding=unit(0.35, "lines"), fill="gray") +
+# For RFC
+    xlab("") + # Data subsample
+  guides(color=guide_legend(title="Time resolution")) +
+theme(text = element_text(size=16), # 16
+        axis.title.x = element_text(size=18), #18
+        axis.text.x = element_text(size=20, face="plain", color="black"), #16
+        axis.title.y = element_text(size=20), #16
+        axis.text.y = element_text(size=16, face="plain", color="black"),
+#        axis.line = element_line(size=1),
+#        strip.text.x = element_text(size = 24),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+#        legend.position = c(0.89, 0.382), # c(0.75, 0.9) c(0.75, 0.75) # For WECC
+        legend.position = c(0.595, 0.245), # c(0.75, 0.9) c(0.75, 0.75) # For RFC
+        legend.title = element_text(size=24),
+        legend.text = element_text(size=20),
+        legend.box.background = element_rect(colour = "black", size=0.5),
+        panel.border=element_rect(colour="black",size=2))#, #18
+#        legend.position = "none"      ) # Remove legend for now
+dev.off()
+```
