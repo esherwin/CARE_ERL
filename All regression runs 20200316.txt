@@ -1,0 +1,262 @@
+/* All regression runs 04202019 */
+set more off
+set max_memory 100000m
+
+/* Load the good 3-hour dataset
+use "U:/WCAI/04042019ThreeHrPanelFromDaily.dta"
+
+/* Convert kWh to correctly-scaled kWh (currently multiplied by 4) */
+gen kWhBlockUnscaled = kWhBlock/4
+drop lkWh
+gen lkWh = log(kWhBlockUnscaled)
+
+/* Full sample regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store fullsampleintraday1
+estimates save AllRegs04202019, replace
+
+/* Coast regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if coast==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store coastintraday1
+estimates save AllRegs04202019, append
+
+/* Hills regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if hills==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store hillsintraday1
+estimates save AllRegs04202019, append
+
+/* Valley regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if valley==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store valleyintraday1
+estimates save AllRegs04202019, append
+
+/* Summer regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if summer==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store summerintraday1
+estimates save AllRegs04202019, append
+
+/* Winter regression on 100% of the sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if summer==0, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store winterintraday1
+estimates save AllRegs04202019, append
+
+/* Time-invariant regressions */
+/* Time-invariant full sample */
+reghdfe lkWh carecurrent templowval temphighval, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store fullflat1
+estimates save AllRegs04202019, append
+
+/* Time-invariant Coast */
+reghdfe lkWh carecurrent templowval temphighval if coast == 1, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store coastflat1
+estimates save AllRegs04202019, append
+
+/* Time-invariant Hills */
+reghdfe lkWh carecurrent templowval temphighval if hills == 1, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store hillsflat1
+estimates save AllRegs04202019, append
+
+/* Time-invariant Valley */
+reghdfe lkWh carecurrent templowval temphighval if valley == 1, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store valleyflat1
+estimates save AllRegs04202019, append
+
+/* Time-invariant Summer */
+reghdfe lkWh carecurrent templowval temphighval if summer == 1, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store summerflat1
+estimates save AllRegs04202019, append
+
+/* Time-invariant Winter */
+reghdfe lkWh carecurrent templowval temphighval if summer == 0, absorb(service_point_id weekdayweekofsample) vce(cluster service_point_id)
+estimates store winterflat1
+estimates save AllRegs04202019, append
+
+/* Robustness checks */
+/* Only weekdays */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if weekday == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store weekdays1
+estimates save AllRegs04202019, append
+
+/* Only weekends */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if weekday == 0, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store weekends1
+estimates save AllRegs04202019, append
+
+/* Only 2010 and 2011 */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if (year == 2010) | (year == 2011), absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store norecession1
+estimates save AllRegs04202019, append
+
+/* Only exclude low/high-use hhlds */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if (kWhp05 == 0) & (kWhp95 == 0), absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store nohighlowuse1
+estimates save AllRegs04202019, append
+
+/* Only low-income quintiles 1 & 2 */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if (quintile1 == 1) | (quintile2 == 1), absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store lowerincome1
+estimates save AllRegs04202019, append
+
+/* Only higher-income quintiles 3-5 */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if (quintile3 == 1) | (quintile4 == 1) | (quintile5 == 1), absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store higherincome1
+estimates save AllRegs04202019, append
+
+/* Linear electricity */
+reghdfe kWhBlockUnscaled carecurrent##hour3block templowval temphighval, absorb(spidhour3block weekdayweekofsamplehourblock) if kWhBlockUnscaled >= 0 vce(cluster service_point_id)
+estimates store linearelectricity1
+estimates save AllRegs04202019, append
+
+/* Full sample 10% of sample */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if in10pctsample == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store tenpctsample1
+estimates save AllRegs04202019, append
+
+/* All programs 10% sample*/
+reghdfe lkWh carecurrent##hour3block rebateparticipant1##hour3block bppcurrent##hour3block climatesmartcurrent##hour3block diraccesscurrent##hour3block smartaccurrent##hour3block smartratecurrent##hour3block templowval temphighval if in10pctsample == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store allprograms1
+estimates save AllRegs04202019, append
+
+/* Add to the 3-hour block panel */
+drop _merge
+merge m:1 service_point_id using "U:/WCAI/04072019DaysPostCARELastRead.dta"
+
+/* Indicate households with at least 90 days of pre and post data
+gen care90PrePostGood = (daysPreCareData >= 90) & (daysPostCAREDataCorrect >= 90) & !missing(daysPreCareData) & !missing(daysPostCAREData)
+
+/* Event study */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if care90PrePostGood == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store eventstudy1
+estimates save AllRegs04202019, append
+
+/* Exclude households that enrolled before data collection began */
+gen careStartPreMeter = daysPreCareData < 0
+/* gen carehhldbool = carehhld == "TRUE" */
+gen onecareenrollmentbool = onecareenrollment == "TRUE"
+/* destring onecareenrollment, replace */
+
+
+gen multiCAREEnrolls = careHH != onecareenrollmentbool
+gen zeroOrOneCAREnotperpetual = (careStartPreMeter != 1) & (multiCAREEnrolls != 1)
+
+
+/* Exclude perpetually enrolled households*/
+gen multiCAREEnrolls = careHH != onecareenrollmentbool
+
+
+gen zeroOrOneCAREnotperpetual = (careStartPreMeter != 1) & (multiCAREEnrolls != 1)
+reghdfe lkWh carecurrent##hour3block templowval temphighval if zeroOrOneCAREnotperpetual == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store noperpetualenrollees1
+estimates save AllRegs04202019, append
+
+/* Exclude households that never en
+gen CAREenrollMidPeriodOrMulti = ((careStartPreMeter == 0) | (multiCAREEnrolls == 1)) & careHH
+gen alwaysNeverCARE = CAREenrollMidPeriodOrMulti == 0
+reghdfe lkWh carecurrent##hour3block templowval temphighval if alwaysNeverCARE == 1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store onlyperpetualornonenroll1
+
+
+/* Esttab call format*/
+/* esttab using example04202019.rtf, replace nogap onecell stats(r2 N_clust N df_r, fmt(%09.3fc %15.0gc %15.0gc %15.0gc ) labels("R-squared" "N clusters" "N observations")) b(3) se(4) */
+
+
+/* Inverse probability weighting */
+/* Compute probability weights using a predictive model using 10% of sample (didn't converge with 100% of sample, just plateaued at 141 iterations */
+/* Limit to 50 iterations */
+logit carecurrent valley coast hills rebateparticipant1 bppcurrent climatesmartcurrent diraccesscurrent smartaccurrent smartratecurrent medincome prentocc medhseval pcollegeormore, iterate(6)
+estimates store logistic1
+
+drop pi
+drop ipw
+predict pi, p
+gen ipw = 1
+replace ipw = 1/pi if carecurrent == 1
+replace ipw = 1/(1 - pi) if carecurrent == 0
+
+/* Compute prediction accuracy, positive predictive value */
+gen predictCARE = pi >= 0.5
+gen predCorrect = predictCARE == carecurrent
+
+/* Fraction predicted CARE */
+su predictCARE
+/* Accuracy */
+su predCorrect
+/* Positive predictive value */
+su predCorrect if carecurrent == 1
+/* 
+
+
+/* Baseline time-invariant regression with inverse probability weights (full sample) */
+reghdfe lkWh carecurrent##hour3block templowval temphighval [pweight=ipw], absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store ipwbaseline1
+
+/* Linear electricity with kWh and not 4*kWh */
+gen kWhBlockUnscaled = kWhBlock/4
+reghdfe kWhBlockUnscaled carecurrent##hour3block templowval temphighval, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store linearelectricityunscaled
+estimates save AllRegs04202019, append
+
+estout linearelectricityunscaled  , stats(r2 N_clust N, fmt(%09.3fc %15.0gc %15.0gc %15.0gc ) labels("R-squared" "N clusters" "N observations")) cells(b(star fmt(3)) se(par fmt(4)))
+
+
+
+/* Set memory limit */
+set more off
+set max_memory 100000m
+
+/* Load daily panel */
+/* use "U:\WCAI\100917hourlypanel.dta" Doesn't have untransformed kWh */
+use "U:\WCAI\140707panel.dta"
+/* Create 3hr blocks */
+gen hour3block = ceil(hour/3)
+
+
+/* Compute average intra-day consumption profiles */
+/* Create electricity consumption in 3-hour blocks */
+/* Divides by 4 to convert to kWh (was originally aggregated kW from 15-minute data) */
+drop kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8
+gen kWhBlock1 = (hour1kWh + hour2kWh + hour3kWh)/4
+gen kWhBlock2 = (hour4kWh + hour5kWh + hour6kWh)/4
+gen kWhBlock3 = (hour7kWh + hour8kWh + hour9kWh)/4
+gen kWhBlock4 = (hour10kWh + hour11kWh + hour12kWh)/4
+gen kWhBlock5 = (hour13kWh + hour14kWh + hour15kWh)/4
+gen kWhBlock6 = (hour16kWh + hour17kWh + hour18kWh)/4
+gen kWhBlock7 = (hour19kWh + hour20kWh + hour21kWh)/4
+gen kWhBlock8 = (hour22kWh + hour23kWh + hour24kWh)/4
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if coast==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if hills==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if valley==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if summer==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if summer==0
+
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if quintile1==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if quintile2==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if quintile3==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if quintile4==1
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if quintile5==1
+
+/* Seasonal intra-day regressions */
+/* Valley summer regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if valley==1 & summer==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store valleyintradaysummer
+
+/* Valley winter regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if valley==1 & summer==0, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store valleyintradaywinter
+
+/* Hills summer regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if hills==1 & summer==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store hillsintradaysummer
+
+/* Hills winter regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if hills==1 & summer==0, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store hillsintradaywinter
+
+/* Coast summer regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if coast==1 & summer==1, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store coastintradaysummer
+
+/* Coast winter regressions */
+reghdfe lkWh carecurrent##hour3block templowval temphighval if coast==1 & summer==0, absorb(spidhour3block weekdayweekofsamplehourblock) vce(cluster service_point_id)
+estimates store coastintradaywinter

@@ -1,0 +1,7 @@
+/* Merge smart meter installation dates */
+/* Use a many-to-one merge from  premise_id_pseudo to E_SM_INSTALL_DATE from the _02premise table */
+
+/* merge m:1 premise_id_pseudo using "U:/WCAI/_02premiseOnlySMInstall04042019.txt" */
+
+merge m:1 premise_id_pseudo using "U:/WCAI/_02premiseOnlySMInstall04042019.dta"
+

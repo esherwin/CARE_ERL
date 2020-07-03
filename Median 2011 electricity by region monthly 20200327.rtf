@@ -1,0 +1,173 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww12200\viewh18140\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 /* Median electricity by region monthly computation */\
+\
+/* Set memory limit */\
+set more off\
+set max_memory 100000m\
+\
+/* Load monthly panel */\
+use "U:\\WCAI\\20200316_AvgDwellingConsMonthly2011.dta\'94\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 /* Average daily electricity consumption (8 periods per day, kWhBlock doesn't include the factor-of-four correction for 15-minute data aggregated to hourly */\
+gen kWhDaily = kWhBlock*8/4\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+su kWhDaily if valley == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+su kWhDaily if valley == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+su kWhDaily if hills == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+su kWhDaily if hills == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+su kWhDaily if coast == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+su kWhDaily if coast == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+su kWhDaily if carecurrent == 0 & kWhDaily <= 1000, detail\
+su kWhDaily if carecurrent > 0 & kWhDaily <= 1000, detail\
+\
+. su kWhDaily if valley == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%            0              0\
+ 5%     1.755076              0\
+10%     4.360614              0       Obs              56,636\
+25%     10.24242              0       Sum of Wgt.      56,636\
+\
+50%     18.03708                      Mean           21.01427\
+                        Largest       Std. Dev.      15.84302\
+75%     28.04506       272.8517\
+90%     40.75106       286.9628       Variance       251.0012\
+95%      50.2407       313.5484       Skewness       2.216383\
+99%     72.08598       329.4998       Kurtosis       19.21393\
+\
+. \
+. su kWhDaily if valley == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .2919707              0\
+ 5%     3.893625              0\
+10%     6.057858              0       Obs              41,192\
+25%     10.75522              0       Sum of Wgt.      41,192\
+\
+50%     17.70619                      Mean           21.55221\
+                        Largest       Std. Dev.      17.92481\
+75%     27.80056       511.4667\
+90%     41.29755        525.822       Variance        321.299\
+95%     51.36921       530.9294       Skewness       6.236606\
+99%     76.12569       548.7723       Kurtosis       122.5798\
+\
+. \
+. su kWhDaily if hills == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .5667673              0\
+ 5%     2.871442              0\
+10%     4.736504              0       Obs             100,466\
+25%     8.523578              0       Sum of Wgt.     100,466\
+\
+50%     13.84322                      Mean           16.48963\
+                        Largest       Std. Dev.      14.77595\
+75%     20.97195       530.6649\
+90%     29.84533       538.4683       Variance       218.3287\
+95%     36.93754       541.3307       Skewness       9.874043\
+99%      59.8451       570.2855       Kurtosis       246.0098\
+\
+. \
+. su kWhDaily if hills == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .8828903              0\
+ 5%     3.427625              0\
+10%      4.94762              0       Obs              29,672\
+25%     7.930025              0       Sum of Wgt.      29,672\
+\
+50%     12.33994                      Mean           15.37873\
+                        Largest       Std. Dev.       13.2271\
+75%     19.34721       274.5063\
+90%     28.48701       323.2328       Variance       174.9561\
+95%     35.53077       330.9679       Skewness        6.06743\
+99%     58.68641       357.5064       Kurtosis       89.82189\
+\
+. \
+. su kWhDaily if coast == 1 & carecurrent > 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .4709439              0\
+ 5%     2.681412              0\
+10%     3.859414              0       Obs              26,219\
+25%     6.107021              0       Sum of Wgt.      26,219\
+\
+50%      9.95744                      Mean           13.19783\
+                        Largest       Std. Dev.      15.91281\
+75%     15.60319        272.685\
+90%       23.141       275.2613       Variance       253.2174\
+95%      30.2654       279.2477       Skewness       7.328467\
+99%     77.89378       286.7216       Kurtosis       81.04151\
+\
+. \
+. su kWhDaily if coast == 1 & carecurrent == 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%      .096515              0\
+ 5%     1.823683              0\
+10%     3.042551              0       Obs              64,318\
+25%     5.669476              0       Sum of Wgt.      64,318\
+\
+50%     9.933213                      Mean            12.2937\
+                        Largest       Std. Dev.      12.55365\
+75%     15.79331       411.9146\
+90%     23.00682       423.6986       Variance       157.5941\
+95%     28.84035       432.7774       Skewness       10.04788\
+99%     47.46143       477.6216       Kurtosis        228.557\
+\
+. \
+. su kWhDaily if carecurrent == 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .1344252              0\
+ 5%     2.192375              0\
+10%     3.899318              0       Obs             222,886\
+25%     7.656583              0       Sum of Wgt.     222,886\
+\
+50%     13.39274                      Mean           16.41113\
+                        Largest       Std. Dev.      14.84011\
+75%     21.20731       530.6649\
+90%     31.39839       538.4683       Variance       220.2288\
+95%      39.7087       541.3307       Skewness        7.13413\
+99%     63.74963       570.2855       Kurtosis       154.4502\
+\
+. \
+. su kWhDaily if carecurrent > 0 & kWhDaily <= 1000, detail\
+\
+                          kWhDaily\
+-------------------------------------------------------------\
+      Percentiles      Smallest\
+ 1%     .4832242              0\
+ 5%     3.200019              0\
+10%     4.783104              0       Obs              97,742\
+25%     8.023268              0       Sum of Wgt.      97,742\
+\
+50%     13.39922                      Mean            17.3861\
+                        Largest       Std. Dev.      16.51821\
+75%     21.85353       511.4667\
+90%     33.60984        525.822       Variance       272.8514\
+95%     43.38317       530.9294       Skewness       6.363221\
+99%     72.10996       548.7723       Kurtosis       107.7409\
+}

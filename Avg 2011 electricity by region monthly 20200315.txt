@@ -1,0 +1,390 @@
+/* Create panel of average daily (or 3-hourly) electricity consumption */
+
+/* Set memory limit */
+set more off
+set max_memory 100000m
+
+/* Load daily panel */
+use "U:\WCAI\04042019ThreeHrPanelFromDaily.dta"
+
+/* Consider only electricity consumption in 2011 */
+keep if year == 2011
+
+/*Create month-day-of-sample-dwelling fixed effects/merge identifiers*/
+gen dateasdate = date(date, "YMD")
+
+gen month_of_year = month(dateasdate)
+gen moy_string = string(month_of_year, "%16.0f")
+gen year_string = string(year, "%16.0f")
+gen month_of_sample = year_string+moy_string
+/* gen mos_string = string(month_of_sample, "%16.0f") */
+
+/* Create service point ID 3-hour block ID*/
+gen spid_mos = spidstring + month_of_sample
+destring spid_mos, replace
+destring month_of_sample, replace 
+
+/* Collapse to mean */
+collapse (mean) service_point_id account_id_pseudo kWhBlock year month_of_year valley hills coast myenergy blockgroup rebateparticipant1 rebateparticipant1confirm bppcurrent carecurrent climatesmartcurrent diraccesscurrent smartaccurrent smartratecurrent quintile1 quintile2 quintile3 quintile4 quintile5, by(spid_mos)
+
+/* Define seasons */
+gen summer = month_of_year >= 6 & month_of_year < 10
+gen winter = summer == 0
+
+/* Average daily electricity consumption (8 periods per day, kWhBlock doesn't include the factor-of-four correction for 15-minute data aggregated to hourly */
+gen kWhDaily = kWhBlock*8/4
+
+/* Save */
+save "U:\WCAI\20200316_AvgDwellingConsMonthly2011.dta”, replace
+
+su kWhDaily if valley == 1 & carecurrent == 0 & summer == 0
+su kWhDaily if valley == 1 & carecurrent == 0 & summer == 1
+su kWhDaily if valley == 1 & carecurrent > 0 & summer == 0
+su kWhDaily if valley == 1 & carecurrent > 0 & summer == 1
+su kWhDaily if valley == 1 & carecurrent == 0
+su kWhDaily if valley == 1 & carecurrent > 1
+su kWhDaily if hills == 1 & carecurrent == 0 & summer == 0
+su kWhDaily if hills == 1 & carecurrent == 0 & summer == 1
+su kWhDaily if hills == 1 & carecurrent > 0 & summer == 0
+su kWhDaily if hills == 1 & carecurrent > 0 & summer == 1
+su kWhDaily if hills == 1 & carecurrent == 0
+su kWhDaily if hills == 1 & carecurrent > 0
+su kWhDaily if coast == 1 & carecurrent == 0 & summer == 0
+su kWhDaily if coast == 1 & carecurrent == 0 & summer == 1
+su kWhDaily if coast == 1 & carecurrent > 0 & summer == 0
+su kWhDaily if coast == 1 & carecurrent > 0
+su kWhDaily if coast == 1 & carecurrent == 0
+su kWhDaily if coast == 1 & carecurrent > 0 & summer == 0
+su kWhDaily if carecurrent == 0 & summer == 0
+su kWhDaily if carecurrent == 0 & summer == 1
+su kWhDaily if carecurrent > 0 & summer == 0
+su kWhDaily if carecurrent > 0 & summer == 1
+su kWhDaily if carecurrent == 0
+su kWhDaily if carecurrent > 0
+
+. su kWhDaily if valley == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     37,447    18.20344    13.42839          0   329.4998
+
+. 
+. su kWhDaily if valley == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     19,189    26.49955     18.5321          0   286.9628
+
+. 
+. su kWhDaily if valley == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     27,091    19.10572    58.19872          0   4688.645
+
+. 
+. su kWhDaily if valley == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     14,110    30.21902    152.1669          0   10339.33
+
+. 
+. su kWhDaily if valley == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     56,636    21.01427    15.84302          0   329.4998
+
+. 
+. su kWhDaily if valley == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     41,201    22.91166    100.9172          0   10339.33
+
+. 
+. su kWhDaily if hills == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     66,592    16.68847    14.67184          0   541.3307
+
+. 
+. su kWhDaily if hills == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     33,874    16.09873    14.97102          0   570.2855
+
+. 
+. su kWhDaily if hills == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     19,587    15.77468    13.35285          0   357.5064
+
+. 
+. su kWhDaily if hills == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     10,085    14.60972    12.94547          0   274.5063
+
+. 
+. su kWhDaily if hills == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |    100,466    16.48963    14.77595          0   570.2855
+
+. 
+. su kWhDaily if hills == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     29,672    15.37873     13.2271          0   357.5064
+
+. 
+. su kWhDaily if coast == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     40,533    13.04944     13.1506          0   432.7774
+
+. 
+. su kWhDaily if coast == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     23,785     11.0058    11.34987          0   477.6216
+
+. 
+. su kWhDaily if coast == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     16,780    13.86003    16.42541          0   286.7216
+
+. su kWhDaily if coast == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |      9,439    12.02061    14.88651          0    272.685
+
+. 
+. su kWhDaily if coast == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     26,219    13.19783    15.91281          0   286.7216
+
+. 
+. su kWhDaily if coast == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     64,318     12.2937    12.55365          0   477.6216
+
+. 
+
+. 
+. su kWhDaily if carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |    145,527    16.03852    14.07989          0   541.3307
+
+. 
+. su kWhDaily if carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     77,359    17.11208    16.15049          0   570.2855
+
+. 
+. su kWhDaily if carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     63,878     16.6733     39.6339          0   4688.645
+
+. 
+. su kWhDaily if carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     33,873    20.38497    99.13593          0   10339.33
+
+. 
+. su kWhDaily if carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |    222,886    16.41113    14.84011          0   570.2855
+
+. 
+. su kWhDaily if carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhDaily |     97,751    17.95948    66.59705          0   10339.33
+
+
+
+
+
+
+
+
+
+
+
+/* OLD, used kWhBlock, which had an extra factor of 4, was a 3-hr block average */
+. su kWhBlock if valley == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     37,447     9.10172    6.714197          0   164.7499
+
+. su kWhBlock if valley == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     19,189    13.24978    9.266048          0   143.4814
+
+. su kWhBlock if valley == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     27,091    9.552859    29.09936          0   2344.323
+
+. su kWhBlock if valley == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     14,110    15.10951    76.08343          0   5169.665
+. su kWhBlock if hills == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     66,592    8.344237    7.335922          0   270.6654
+
+. su kWhBlock if hills == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     33,874    8.049365     7.48551          0   285.1428
+
+. su kWhBlock if hills == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     19,587    7.887342    6.676426          0   178.7532
+
+. su kWhBlock if hills == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     10,085    7.304859    6.472735          0   137.2532
+
+
+. su kWhBlock if coast == 1 & carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     40,533    6.524722      6.5753          0   216.3887
+
+. su kWhBlock if coast == 1 & carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     23,785    5.502901    5.674936          0   238.8108
+
+. su kWhBlock if coast == 1 & carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     16,780    6.930014    8.212707          0   143.3608
+
+. su kWhBlock if coast == 1 & carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |      9,439    6.010305    7.443255          0   136.3425
+
+. su kWhBlock if carecurrent == 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |    145,527    8.019259    7.039943          0   270.6654
+
+. su kWhBlock if carecurrent == 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     77,359    8.556039    8.075246          0   285.1428
+
+. su kWhBlock if carecurrent > 0 & summer == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     63,878    8.336651    19.81695          0   2344.323
+
+. su kWhBlock if carecurrent > 0 & summer == 1
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     33,873    10.19249    49.56796          0   5169.665
+
+
+
+. su kWhBlock if carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |    222,886    8.205564    7.420054          0   285.1428
+
+. su kWhBlock if carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     97,751    8.979741    33.29852          0   5169.665
+
+
+. su kWhBlock if valley == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     56,636    10.50713    7.921509          0   164.7499
+
+. su kWhBlock if valley == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     41,201    11.45583    50.45861          0   5169.665
+
+. su kWhBlock if hills == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |    100,466    8.244816    7.387975          0   285.1428
+
+. su kWhBlock if hills == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     29,672    7.689366    6.613548          0   178.7532
+
+. su kWhBlock if coast == 1 & carecurrent == 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     64,318     6.14685    6.276825          0   238.8108
+
+. su kWhBlock if coast == 1 & carecurrent > 0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    kWhBlock |     26,219    6.598913    7.956403          0   143.3608
+

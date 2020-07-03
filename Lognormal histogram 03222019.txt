@@ -1,0 +1,6 @@
+/* Generate histograms */
+/* use "U:\WCAI\03222019ThreeHrpanel10pctSample.dta" */
+hist hourkWh if hourkWh <= 100, frequency normal title(kWh per 3-hour period)
+
+hist lkWh, frequency normal title(ln(kWh) per 3-hour period)
+

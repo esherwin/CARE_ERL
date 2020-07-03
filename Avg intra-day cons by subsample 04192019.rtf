@@ -1,0 +1,59 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf200
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11100\viewh10300\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 /* Compute intra-day average consumption in each subsample 04192019 */\
+\
+/* Set memory limit */\
+set more off\
+set max_memory 100000m\
+\
+/* Load daily panel */\
+/* use "U:\\WCAI\\100917hourlypanel.dta" Doesn't have untransformed kWh */\
+use "U:\\WCAI\\140707panel.dta"\
+/* Create 3hr blocks */\
+gen hour3block = ceil(hour/3)\
+\
+\
+/* Create electricity consumption in 3-hour blocks */\
+gen kWhBlock1 = hour1kWh + hour2kWh + hour3kWh\
+gen kWhBlock2 = hour4kWh + hour5kWh + hour6kWh\
+gen kWhBlock3 = hour7kWh + hour8kWh + hour9kWh\
+gen kWhBlock4 = hour10kWh + hour11kWh + hour12kWh\
+gen kWhBlock5 = hour13kWh + hour14kWh + hour15kWh\
+gen kWhBlock6 = hour16kWh + hour17kWh + hour18kWh\
+gen kWhBlock7 = hour19kWh + hour20kWh + hour21kWh\
+gen kWhBlock8 = hour22kWh + hour23kWh + hour24kWh\
+\
+gen summer = jun + jul + aug + sep\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8\
+ /*\
+\
+    Variable |        Obs        Mean    Std. Dev.       Min        Max\
+-------------+---------------------------------------------------------\
+   kWhBlock1 | 18,556,980    6.425011    10.75876  -150.2433     3769.6\
+   kWhBlock2 | 18,556,987    5.712462    9.655762  -232.5636       2784\
+   kWhBlock3 | 18,556,941    7.093024    10.91172  -88.47479     3622.4\
+   kWhBlock4 | 18,558,468    8.337699    15.14321   -35.5752     7321.6\
+   kWhBlock5 | 18,566,957    8.994617    22.30925          0      10976\
+-------------+---------------------------------------------------------\
+   kWhBlock6 | 18,574,782    10.66487    27.19896          0      12224\
+   kWhBlock7 | 18,579,239    12.55144    24.10218          0    10732.8\
+   kWhBlock8 | 18,579,405    10.22609    16.04558   -121.368       6656\
+*/\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if coast==1\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if hills==1\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if valley==1\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if summer==1\
+\
+su kWhBlock1 kWhBlock2 kWhBlock3 kWhBlock4 kWhBlock5 kWhBlock6 kWhBlock7 kWhBlock8 if summer==0\
+\
+gen summedHourkWh = (hour1kWh + hour2kWh + hour3kWh + hour4kWh + hour5kWh + hour6kWh + hour7kWh + hour8kWh + hour9kWh + hour10kWh + hour11kWh + hour12kWh + hour13kWh + hour14kWh + hour15kWh + hour16kWh + hour17kWh + hour18kWh + hour19kWh + hour20kWh + hour21kWh + hour22kWh + hour23kWh + hour24kWh)/4}
